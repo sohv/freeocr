@@ -1,74 +1,30 @@
-import Together from "together-ai";
-import fs from "fs";
-import dotenv from 'dotenv';
-//dotenv.config({ path: '../.env' }); 
+import * as fs from "fs";
+import * as dotenv from "dotenv";
+
 dotenv.config();
 
-export async function ocr({
-  filePath,
-  apiKey = process.env.TOGETHER_API_KEY,
-  model = "Llama-3.2-90B-Vision",
-}: {
-  filePath: string;
-  apiKey?: string;
-  model?: "Llama-3.2-90B-Vision" | "Llama-3.2-11B-Vision" | "free";
-}) {
-  const visionLLM =
-    model === "free"
-      ? "meta-llama/Llama-Vision-Free"
-      : `meta-llama/${model}-Instruct-Turbo`;
+import ollama from "ollama";
 
-  const together = new Together({
-    apiKey,
-  });
+dotenv.config();
 
-  let finalMarkdown = await getMarkDown({ together, visionLLM, filePath });
-
-  return finalMarkdown;
+export async function ocr({ filePath, model = "llama3.2-vision" }: { filePath: string; model?: string }) {
+  return await getMarkDown({ model, filePath });
 }
 
-async function getMarkDown({
-  together,
-  visionLLM,
-  filePath,
-}: {
-  together: Together;
-  visionLLM: string;
-  filePath: string;
-}) {
-  const systemPrompt = `Convert the provided image into Markdown format. Ensure that all content from the page is included, such as headers, footers, subtexts, images (with alt text if possible), tables, and any other elements.
+async function getMarkDown({ model, filePath }: { model: string; filePath: string }) {
+  const systemPrompt = `Extract text and structure from the provided image and return it in Markdown format.`;
 
-  Requirements:
+  const finalImageUrl = isRemoteFile(filePath) ? filePath : `data:image/jpeg;base64,${encodeImage(filePath)}`;
 
-  - Output Only Markdown: Return solely the Markdown content without any additional explanations or comments.
-  - No Delimiters: Do not use code fences or delimiters like \`\`\`markdown.
-  - Complete Content: Do not omit any part of the page, including headers, footers, and subtext.
-  `;
-
-  const finalImageUrl = isRemoteFile(filePath)
-    ? filePath
-    : `data:image/jpeg;base64,${encodeImage(filePath)}`;
-
-  const output = await together.chat.completions.create({
-    model: visionLLM,
+  const output = await ollama.chat({
+    model: model,
     messages: [
-      {
-        role: "user",
-        // @ts-expect-error
-        content: [
-          { type: "text", text: systemPrompt },
-          {
-            type: "image_url",
-            image_url: {
-              url: finalImageUrl,
-            },
-          },
-        ],
-      },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Extract all text and structure from this image: ${finalImageUrl}` },
     ],
   });
 
-  return output.choices[0].message.content;
+  return output.message.content;
 }
 
 function encodeImage(imagePath: string) {
