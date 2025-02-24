@@ -45,3 +45,8 @@ You can control this with the `model` option which is set to `Llama-3.2-90B-Visi
 ## Credit
 
 This project was inspired by [Zerox](https://github.com/getomni-ai/zerox). Go check them out!
+
+## References
+
+- [Ollama with Node](https://dev.to/koolkamalkishor/running-and-creating-your-own-llms-locally-with-nodejs-api-using-ollama-97f)
+- 
